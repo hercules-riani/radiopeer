@@ -2,8 +2,10 @@
    Tudo roda neste navegador: nenhum laudo é enviado a servidor. */
 'use strict';
 
+const APP_VERSION = '1.1.0';
 const PROMPT_VERSION = 'v1';
 const RP_ORDEM = { '1': 0, '2a': 1, '2b': 2, '3a': 3, '3b': 4 };
+const BACKUP_LIMIAR = 10; // análises sem backup até avisar
 
 /* ===================== util ===================== */
 const $ = (s) => document.querySelector(s);
@@ -84,7 +86,10 @@ async function carregarConfig() {
     provider: kv.provider || 'gemini',
     providers: kv.providers || {},
     anonimizar: kv.anonimizar || false,
-    segmentos: kv.segmentos || SEGMENTOS_PADRAO.join('\n')
+    segmentos: kv.segmentos || SEGMENTOS_PADRAO.join('\n'),
+    bemVindoVisto: kv.bemVindoVisto || false,
+    backupContagem: kv.backupContagem || 0,
+    backupAdiadoEm: kv.backupAdiadoEm || null
   };
   // migração do formato antigo (uma chave só, sem separação por provedor)
   if (kv.apiKey && !CFG.providers[CFG.provider]) {
@@ -413,6 +418,7 @@ async function salvarAnalises(lista) {
     await db.pares.put(par);
     salvos++; idsSalvos.push(par.id);
   }
+  if (salvos) checarBackup();
   return { salvos, idsSalvos };
 }
 
@@ -997,6 +1003,7 @@ function renderConfig() {
   $('#cfg-anon').checked = !!CFG.anonimizar;
   $('#cfg-segmentos').value = CFG.segmentos;
   $('#sobre-pv').textContent = PROMPT_VERSION;
+  $('#sobre-versao').textContent = APP_VERSION;
   atualizarCamposApi();
 }
 function atualizarCamposApi() {
@@ -1063,6 +1070,54 @@ async function exportarBackup() {
   a.click();
   URL.revokeObjectURL(a.href);
   $('#dados-msg').textContent = 'Backup exportado.';
+  const n = await db.pares.where('status').equals('analisado').count();
+  await salvarConfig({ backupContagem: n, backupAdiadoEm: null });
+  $('#aviso-backup').classList.remove('show');
+}
+
+/* ===== lembrete de backup ===== */
+async function checarBackup() {
+  const n = await db.pares.where('status').equals('analisado').count();
+  const semBackup = n - (CFG.backupContagem || 0);
+  const adiadoRecente = CFG.backupAdiadoEm && (Date.now() - new Date(CFG.backupAdiadoEm).getTime()) < 24 * 3600 * 1000;
+  const mostrar = semBackup >= BACKUP_LIMIAR && !adiadoRecente;
+  $('#aviso-backup').classList.toggle('show', mostrar);
+  if (mostrar) $('#aviso-backup-txt').textContent = `⚠ ${semBackup} análises sem backup — os dados vivem só neste navegador.`;
+}
+
+/* ===== aviso de nova versão ===== */
+async function checarVersao() {
+  try {
+    const r = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (j.v && j.v !== APP_VERSION) $('#aviso-versao').classList.add('show');
+  } catch (e) { /* offline: ignora */ }
+}
+async function aplicarAtualizacao() {
+  try {
+    await Promise.all([
+      fetch('index.html', { cache: 'reload' }),
+      fetch('app.js?v=' + APP_VERSION, { cache: 'reload' }),
+      fetch('styles.css?v=' + APP_VERSION, { cache: 'reload' })
+    ]);
+  } catch (e) { /* segue para o reload mesmo assim */ }
+  location.reload();
+}
+
+/* ===== boas-vindas ===== */
+async function checarBemVindo() {
+  if (CFG.bemVindoVisto) return;
+  const n = await db.laudos.count();
+  if (n > 0) { await salvarConfig({ bemVindoVisto: true }); return; }
+  const dlg = $('#dlg-bemvindo');
+  dlg.returnValue = '';
+  dlg.showModal();
+  dlg.addEventListener('close', async function h() {
+    dlg.removeEventListener('close', h);
+    await salvarConfig({ bemVindoVisto: true });
+    if (dlg.returnValue === 'exemplo') carregarExemplo();
+  });
 }
 async function importarBackup(file) {
   try {
@@ -1249,7 +1304,19 @@ async function init() {
   $('#file-import').addEventListener('change', e => { if (e.target.files[0]) importarBackup(e.target.files[0]); e.target.value = ''; });
   $('#btn-apagar').addEventListener('click', apagarTudo);
 
+  // banners: nova versão e backup
+  $('#btn-atualizar-versao').addEventListener('click', aplicarAtualizacao);
+  $('#btn-backup-agora').addEventListener('click', exportarBackup);
+  $('#btn-backup-depois').addEventListener('click', async () => {
+    await salvarConfig({ backupAdiadoEm: hoje() });
+    $('#aviso-backup').classList.remove('show');
+  });
+
   await renderTudo();
+  await checarBemVindo();
+  await checarBackup();
+  checarVersao();
+  setInterval(checarVersao, 10 * 60 * 1000);
 }
 
 init();

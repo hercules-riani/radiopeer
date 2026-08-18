@@ -6,7 +6,7 @@
 <title>RADIOPEER</title>
 <meta name="description" content="Ferramenta de aprendizado para residentes de radiologia: compara pré-laudos com laudos oficiais (RadPeer) e acompanha a evolução.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩻</text></svg>">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=1.1.0">
 <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -49,6 +49,16 @@
   </nav>
 
   <div class="main">
+
+    <div class="banner" id="aviso-versao">
+      <span>🔄 Nova versão do RADIOPEER disponível.</span>
+      <button class="btn small primary" id="btn-atualizar-versao">Atualizar agora</button>
+    </div>
+    <div class="banner" id="aviso-backup">
+      <span id="aviso-backup-txt">⚠ Você tem análises sem backup — os dados vivem só neste navegador.</span>
+      <button class="btn small primary" id="btn-backup-agora">Exportar backup</button>
+      <button class="btn small" id="btn-backup-depois">Depois</button>
+    </div>
 
     <!-- ===== ENVIAR ===== -->
     <section class="view active" id="v-enviar">
@@ -242,7 +252,8 @@
           </div>
           <div class="panel">
             <h4>Sobre</h4>
-            <p class="hint">RADIOPEER — ferramenta de aprendizado para residentes de radiologia. Compara o pré-laudo do residente com o laudo oficial, classifica discrepâncias pela escala RadPeer (ACR 2016: 1, 2a, 2b, 3a, 3b) com taxonomia de Kim–Mansfield, registra great calls e acompanha a evolução. Nenhum laudo é enviado a servidor: todo o processamento acontece neste navegador. Versão do prompt de avaliação: <span id="sobre-pv"></span>.</p>
+            <p class="hint">RADIOPEER — ferramenta de aprendizado para residentes de radiologia. Compara o pré-laudo do residente com o laudo oficial, classifica discrepâncias pela escala RadPeer (ACR 2016: 1, 2a, 2b, 3a, 3b) com taxonomia de Kim–Mansfield, registra great calls e acompanha a evolução. Nenhum laudo é enviado a servidor: todo o processamento acontece neste navegador. Versão do app: <span id="sobre-versao"></span> · prompt de avaliação: <span id="sobre-pv"></span>.</p>
+            <p class="hint">💬 <b>Encontrou um problema ou tem uma sugestão?</b> Abra um relato em <a class="go" href="https://github.com/hercules-riani/radiopeer/issues" target="_blank" rel="noopener">github.com/hercules-riani/radiopeer/issues</a> ou fale diretamente com o Hercules.</p>
           </div>
         </div>
       </div>
@@ -250,6 +261,23 @@
 
   </div>
 </div>
+
+<dialog id="dlg-bemvindo">
+  <form method="dialog" class="dlg-form">
+    <h4>Bem-vindo ao RADIOPEER 🩻</h4>
+    <p style="font-size:13px; margin:0 0 10px;">Ferramenta de aprendizado: compare seus pré-laudos com os laudos oficiais e acompanhe sua evolução. Em 3 passos:</p>
+    <ol style="font-size:13px; margin:0 0 12px; padding-left:20px; display:flex; flex-direction:column; gap:6px;">
+      <li><b>Enviar</b> — arraste seus pré-laudos e os laudos oficiais (PDF, Word ou ZIP);</li>
+      <li><b>Analisar</b> — copie o prompt, cole no seu ChatGPT/Gemini e cole a resposta de volta;</li>
+      <li><b>Resultado</b> — veja discrepâncias, grau RadPeer, acertos e sugestões.</li>
+    </ol>
+    <p class="hint" style="margin:0 0 12px;">Seus laudos não saem deste navegador. Problemas ou sugestões: <a class="go" href="https://github.com/hercules-riani/radiopeer/issues" target="_blank" rel="noopener">github.com/hercules-riani/radiopeer/issues</a> ou fale com o Hercules.</p>
+    <div class="cta-row" style="margin-top:0;">
+      <button class="btn small primary" value="exemplo">Ver caso de exemplo</button>
+      <button class="btn small" value="comecar">Começar com meus laudos</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="dlg-editar">
   <form method="dialog" class="dlg-form">
@@ -285,6 +313,6 @@
 
 <div id="toast"></div>
 
-<script src="app.js"></script>
+<script src="app.js?v=1.1.0"></script>
 </body>
 </html>

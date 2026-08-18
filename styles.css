@@ -38,6 +38,8 @@ body{background:var(--bg); color:var(--ink); font:14px/1.5 "Segoe UI", system-ui
 .topbar .right{margin-left:auto; color:var(--muted); font-size:12px;}
 .topbar input, .topbar select{border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); font:inherit; font-size:12.5px; padding:4px 10px;}
 .topbar input{width:190px;}
+.banner{display:none; align-items:center; gap:12px; padding:8px 14px; background:var(--accent-soft); border-bottom:1px solid var(--accent); font-size:13px; flex-wrap:wrap;}
+.banner.show{display:flex;}
 .view{flex:1; min-height:0; display:none; flex-direction:column;}
 .view.active{display:flex;}
 .scrollpane{overflow:auto; min-height:0; flex:1;}
