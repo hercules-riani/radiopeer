@@ -448,7 +448,7 @@ async function chamarIA(prompt) {
     return j.content.map(c => c.text || '').join('');
   }
   if (CFG.provider === 'gemini') {
-    const m = model || 'gemini-2.5-flash';
+    const m = model || 'gemini-3.6-flash';
     const corpo = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
     // método oficial atual: chave no cabeçalho (funciona com chaves AIza... e com as novas AQ....)
     let r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
@@ -1019,12 +1019,12 @@ function atualizarCamposApi() {
 }
 
 const MODELOS_SUGERIDOS = {
-  gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'],
+  gemini: ['gemini-3.6-flash', 'gemini-3.6-pro', 'gemini-2.5-flash', 'gemini-2.5-pro'],
   openai: ['gpt-5.4-mini', 'gpt-5.4', 'gpt-4o-mini', 'gpt-4o'],
   claude: ['claude-sonnet-5', 'claude-haiku-4-5', 'claude-opus-5'],
   compat: ['llama3.1', 'qwen2.5', 'mistral']
 };
-const MODELO_PADRAO = { gemini: 'gemini-2.5-flash', openai: 'gpt-5.4-mini', claude: 'claude-sonnet-5', compat: '' };
+const MODELO_PADRAO = { gemini: 'gemini-3.6-flash', openai: 'gpt-5.4-mini', claude: 'claude-sonnet-5', compat: '' };
 
 function montarSeletorModelo(prov, modeloSalvo) {
   const sug = MODELOS_SUGERIDOS[prov] || [];
