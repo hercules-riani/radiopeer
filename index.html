@@ -202,16 +202,17 @@
             <div id="cfg-api-campos" style="display:none;">
               <label class="campo">Provedor
                 <select id="cfg-provider">
+                  <option value="gemini">Gemini (Google) — tem cota gratuita</option>
                   <option value="claude">Claude (Anthropic)</option>
-                  <option value="gemini">Gemini (Google)</option>
-                  <option value="compat">Compatível com OpenAI (URL própria / local)</option>
+                  <option value="compat">Modelo local / endpoint compatível com OpenAI</option>
                 </select>
               </label>
+              <p class="hint" id="provider-dica"></p>
               <label class="campo">Chave de API <input type="password" id="cfg-key" placeholder="cole sua chave"></label>
               <label class="campo">Modelo <input id="cfg-model" placeholder="ex.: claude-sonnet-5"></label>
               <label class="campo" id="cfg-base-wrap" style="display:none;">URL base <input id="cfg-base" placeholder="http://localhost:11434/v1"></label>
               <div class="cta-row"><button class="btn small" id="btn-testar-api">Testar conexão</button><span class="hint" id="teste-api-msg"></span></div>
-              <p class="hint">A chave fica salva apenas neste navegador. A API da OpenAI não aceita chamadas diretas do navegador — use o modo assistido ou um endpoint compatível.</p>
+              <p class="hint">A chave fica salva apenas neste navegador. ⚠ A chave da <b>OpenAI/ChatGPT não funciona aqui</b>: a OpenAI bloqueia chamadas feitas do navegador — para usar o seu ChatGPT, use o modo Assistido (copiar/colar), que não precisa de chave.</p>
             </div>
             <label class="campo check"><input type="checkbox" id="cfg-anon"> Anonimizar (remove nome/ID do paciente do texto enviado à IA ou copiado no prompt)</label>
           </div>

@@ -970,7 +970,16 @@ function renderConfig() {
 }
 function atualizarCamposApi() {
   $('#cfg-api-campos').style.display = $('#cfg-modo').value === 'api' ? '' : 'none';
-  $('#cfg-base-wrap').style.display = $('#cfg-provider').value === 'compat' ? '' : 'none';
+  const prov = $('#cfg-provider').value;
+  $('#cfg-base-wrap').style.display = prov === 'compat' ? '' : 'none';
+  const dicas = {
+    gemini: 'Chave gratuita em aistudio.google.com → "Get API key". Só a chave basta — deixe Modelo vazio (usa gemini-2.5-flash). Funciona direto do navegador.',
+    claude: 'Chave em console.anthropic.com (paga por uso). Só a chave basta — deixe Modelo vazio (usa claude-sonnet-5).',
+    compat: 'Para modelos locais (Ollama, LM Studio) ou proxy próprio: informe a URL base (ex.: http://localhost:11434/v1). A API oficial da OpenAI NÃO aceita chamadas do navegador.'
+  };
+  $('#provider-dica').textContent = dicas[prov] || '';
+  const ph = { gemini: 'ex.: gemini-2.5-flash (opcional)', claude: 'ex.: claude-sonnet-5 (opcional)', compat: 'ex.: llama3.1 (obrigatório p/ local)' };
+  $('#cfg-model').placeholder = ph[prov] || '';
 }
 
 /* ===================== backup ===================== */
