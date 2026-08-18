@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RADIOPEER</title>
+<meta name="description" content="Ferramenta de aprendizado para residentes de radiologia: compara pré-laudos com laudos oficiais (RadPeer) e acompanha a evolução.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩻</text></svg>">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+
+<div class="app">
+  <nav class="rail" aria-label="Menu principal">
+    <div class="logo">R<em>P</em></div>
+    <button class="active" data-view="v-enviar" title="Enviar laudos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span class="lbl">Enviar</span>
+    </button>
+    <button data-view="v-pares" title="Pares de laudos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>
+      <span class="lbl">Pares</span>
+    </button>
+    <button data-view="v-analise" title="Análise">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span class="lbl">Analisar</span>
+    </button>
+    <button data-view="v-result" title="Resultado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span class="lbl">Resultado</span>
+    </button>
+    <button data-view="v-evolucao" title="Evolução">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="lbl">Evolução</span>
+    </button>
+    <button data-view="v-checklist" title="Checklist">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 13l2 2 4-4"/></svg>
+      <span class="lbl">Checklist</span>
+    </button>
+    <div class="spacer"></div>
+    <button data-view="v-config" title="Configurações">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="lbl">Configurações</span>
+    </button>
+  </nav>
+
+  <div class="main">
+
+    <!-- ===== ENVIAR ===== -->
+    <section class="view active" id="v-enviar">
+      <div class="topbar"><span class="crumb">Enviar laudos</span><span class="right" id="enviar-status"></span></div>
+      <div class="scrollpane pad">
+        <div class="dropzones">
+          <div class="drop" id="drop-pre">
+            <h3>Meus pré-laudos</h3>
+            <p>Arraste PDF, Word, TXT ou ZIP aqui — vários de uma vez — ou <label class="linklike" for="file-pre">clique para escolher</label></p>
+            <input type="file" id="file-pre" multiple accept=".pdf,.docx,.doc,.txt,.zip" hidden>
+            <div class="files" id="files-pre"></div>
+          </div>
+          <div class="drop" id="drop-oficial">
+            <h3>Laudos oficiais</h3>
+            <p>Assinados pelo staff — o programa pareia sozinho — ou <label class="linklike" for="file-oficial">clique para escolher</label></p>
+            <input type="file" id="file-oficial" multiple accept=".pdf,.docx,.doc,.txt,.zip" hidden>
+            <div class="files" id="files-oficial"></div>
+          </div>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary" id="btn-ir-analise">Ir para análise</button>
+          <span class="hint">Pareamento automático por paciente + título do exame (títulos normalizados). Arquivos repetidos são ignorados.</span>
+          <a class="linklike" id="btn-sample" style="margin-left:auto;">Sem arquivos? Carregar caso de exemplo →</a>
+        </div>
+        <p class="hint" id="parse-avisos"></p>
+      </div>
+    </section>
+
+    <!-- ===== PARES ===== -->
+    <section class="view" id="v-pares">
+      <div class="topbar">
+        <span class="crumb">Pares</span>
+        <button class="btn small primary" id="btn-analisar-todos">Analisar prontos</button>
+        <input id="busca-pares" placeholder="Buscar paciente ou exame…">
+        <select id="filtro-pares">
+          <option value="">todos</option>
+          <option value="analisado">analisados</option>
+          <option value="pronto">prontos</option>
+          <option value="sem_par">sem par</option>
+          <option value="discussao">p/ discussão</option>
+        </select>
+        <span class="right" id="pares-resumo"></span>
+      </div>
+      <div class="scrollpane">
+        <table>
+          <thead><tr><th>Paciente</th><th>Exame</th><th>Data</th><th>Liberado por</th><th>Status</th><th>RadPeer</th><th>Ações</th></tr></thead>
+          <tbody id="tbody-pares"></tbody>
+        </table>
+        <p class="hint pad" id="pares-vazio" style="display:none;">Nenhum laudo ainda — envie arquivos na tela <b>Enviar</b> ou carregue o caso de exemplo.</p>
+      </div>
+    </section>
+
+    <!-- ===== ANÁLISE ===== -->
+    <section class="view" id="v-analise">
+      <div class="topbar"><span class="crumb">Análise</span><span class="right" id="analise-status"></span></div>
+      <div class="scrollpane pad">
+        <div class="grid2">
+          <div class="panel">
+            <h4>Fila</h4>
+            <div class="bar" style="margin-bottom:10px;"><i id="fila-bar" style="width:0%"></i></div>
+            <ul class="lista-simples" id="fila-lista"></ul>
+          </div>
+          <div class="panel" id="painel-assistido">
+            <h4>Analisar com o seu ChatGPT / Claude / Gemini — 2 passos</h4>
+            <div class="cta-row" style="margin-top:0;">
+              <button class="btn primary" id="btn-copiar-prompt">1 · Copiar prompt</button>
+              <label class="hint">lote:
+                <select id="sel-lote">
+                  <option value="5">5 pares</option>
+                  <option value="10">10 pares</option>
+                  <option value="all">todos</option>
+                </select>
+              </label>
+              <span class="hint">cole no seu chat de IA e copie a resposta completa</span>
+            </div>
+            <textarea id="resposta-ia" placeholder="2 · Cole aqui a resposta do chat…"></textarea>
+            <div class="cta-row">
+              <button class="btn small confirm" id="btn-validar">Validar e salvar</button>
+              <span class="hint">resposta parcial ou truncada? o programa salva os pares válidos e mantém os demais na fila</span>
+            </div>
+            <p class="hint" id="assistido-msg"></p>
+          </div>
+          <div class="panel" id="painel-api" style="display:none;">
+            <h4>Análise automática (chave de API configurada)</h4>
+            <div class="cta-row" style="margin-top:0;">
+              <button class="btn primary" id="btn-rodar-api">Analisar fila automaticamente</button>
+              <span class="hint" id="api-progresso"></span>
+            </div>
+            <p class="hint" id="api-msg"></p>
+          </div>
+        </div>
+        <p class="hint" id="modo-info" style="margin-top:12px;"></p>
+      </div>
+    </section>
+
+    <!-- ===== RESULTADO ===== -->
+    <section class="view" id="v-result">
+      <div class="rhead">
+        <button class="btn small nav" id="btn-prev" title="Par anterior">‹</button>
+        <h3 id="res-titulo">—</h3>
+        <button class="btn small nav" id="btn-next" title="Próximo par">›</button>
+        <span class="meta" id="res-meta"></span>
+        <div class="legend">
+          <span><span class="key om"></span>Omissão</span>
+          <span><span class="key dv"></span>Divergência</span>
+          <span><span class="key gc"></span>Great call</span>
+          <button class="btn small nav" id="btn-pdf">Exportar PDF</button>
+        </div>
+      </div>
+      <div class="result-grid" id="result-grid">
+        <div class="compare">
+          <div class="laudo">
+            <header>Pré-laudo <span class="who" id="res-quem-pre"></span></header>
+            <div class="txt" id="res-txt-pre"></div>
+          </div>
+          <div class="laudo">
+            <header>Oficial <span class="who" id="res-quem-oficial"></span></header>
+            <div class="txt" id="res-txt-oficial"></div>
+          </div>
+        </div>
+        <div class="feed" id="res-feed"></div>
+      </div>
+      <p class="hint pad" id="res-vazio" style="display:none;">Nenhum par analisado ainda.</p>
+    </section>
+
+    <!-- ===== EVOLUÇÃO ===== -->
+    <section class="view" id="v-evolucao">
+      <div class="topbar"><span class="crumb">Evolução</span><span class="right" id="evo-resumo"></span></div>
+      <div class="scrollpane pad"><div class="grid2" id="evo-conteudo"></div></div>
+    </section>
+
+    <!-- ===== CHECKLIST ===== -->
+    <section class="view" id="v-checklist">
+      <div class="topbar"><span class="crumb">Checklist</span><span class="right">gerado dos seus erros confirmados — revisar antes de liberar o pré-laudo</span></div>
+      <div class="scrollpane pad" id="check-conteudo"></div>
+    </section>
+
+    <!-- ===== CONFIG ===== -->
+    <section class="view" id="v-config">
+      <div class="topbar"><span class="crumb">Configurações</span><span class="right">opções avançadas — nada aqui é necessário para usar o programa</span></div>
+      <div class="scrollpane pad">
+        <div class="grid2">
+          <div class="panel">
+            <h4>Motor de IA</h4>
+            <label class="campo">Modo
+              <select id="cfg-modo">
+                <option value="assistido">Assistido (copiar/colar no seu chat) — padrão</option>
+                <option value="api">Automático (chave de API)</option>
+              </select>
+            </label>
+            <div id="cfg-api-campos" style="display:none;">
+              <label class="campo">Provedor
+                <select id="cfg-provider">
+                  <option value="claude">Claude (Anthropic)</option>
+                  <option value="gemini">Gemini (Google)</option>
+                  <option value="compat">Compatível com OpenAI (URL própria / local)</option>
+                </select>
+              </label>
+              <label class="campo">Chave de API <input type="password" id="cfg-key" placeholder="cole sua chave"></label>
+              <label class="campo">Modelo <input id="cfg-model" placeholder="ex.: claude-sonnet-5"></label>
+              <label class="campo" id="cfg-base-wrap" style="display:none;">URL base <input id="cfg-base" placeholder="http://localhost:11434/v1"></label>
+              <div class="cta-row"><button class="btn small" id="btn-testar-api">Testar conexão</button><span class="hint" id="teste-api-msg"></span></div>
+              <p class="hint">A chave fica salva apenas neste navegador. A API da OpenAI não aceita chamadas diretas do navegador — use o modo assistido ou um endpoint compatível.</p>
+            </div>
+            <label class="campo check"><input type="checkbox" id="cfg-anon"> Anonimizar (remove nome/ID do paciente do texto enviado à IA ou copiado no prompt)</label>
+          </div>
+          <div class="panel">
+            <h4>Segmentos (case-mix)</h4>
+            <p class="hint">Um por linha, no formato <code>Nome: palavra1, palavra2</code>. Usados para classificar os exames no painel de evolução.</p>
+            <textarea id="cfg-segmentos" rows="10"></textarea>
+            <div class="cta-row"><button class="btn small" id="btn-salvar-seg">Salvar segmentos</button></div>
+          </div>
+          <div class="panel">
+            <h4>Dados</h4>
+            <p class="hint">Tudo fica salvo <b>apenas neste navegador</b>. Faça backup regularmente — limpar os dados do navegador apaga o histórico.</p>
+            <div class="cta-row">
+              <button class="btn small" id="btn-backup">Exportar backup (ZIP)</button>
+              <label class="btn small" for="file-import" style="cursor:pointer;">Importar backup</label>
+              <input type="file" id="file-import" accept=".zip" hidden>
+            </div>
+            <div class="cta-row">
+              <button class="btn small reject" id="btn-apagar">Apagar todos os dados…</button>
+            </div>
+            <p class="hint" id="dados-msg"></p>
+          </div>
+          <div class="panel">
+            <h4>Sobre</h4>
+            <p class="hint">RADIOPEER — ferramenta de aprendizado para residentes de radiologia. Compara o pré-laudo do residente com o laudo oficial, classifica discrepâncias pela escala RadPeer (ACR 2016: 1, 2a, 2b, 3a, 3b) com taxonomia de Kim–Mansfield, registra great calls e acompanha a evolução. Nenhum laudo é enviado a servidor: todo o processamento acontece neste navegador. Versão do prompt de avaliação: <span id="sobre-pv"></span>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<dialog id="dlg-editar">
+  <form method="dialog" class="dlg-form">
+    <h4>Editar laudo</h4>
+    <label class="campo">Nome do paciente <input id="ed-nome"></label>
+    <label class="campo">ID do paciente <input id="ed-id"></label>
+    <label class="campo">Título do exame <input id="ed-titulo"></label>
+    <label class="campo">Data (dd/mm/aaaa) <input id="ed-data"></label>
+    <label class="campo">Liberado por <input id="ed-liberou"></label>
+    <label class="campo">Tipo
+      <select id="ed-tipo"><option value="pre">Pré-laudo</option><option value="oficial">Oficial</option></select>
+    </label>
+    <div class="cta-row">
+      <button class="btn small primary" value="ok">Salvar</button>
+      <button class="btn small" value="cancel">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-parear">
+  <form method="dialog" class="dlg-form">
+    <h4>Parear manualmente</h4>
+    <p class="hint" id="parear-com"></p>
+    <label class="campo">Parear com:
+      <select id="sel-parear"></select>
+    </label>
+    <div class="cta-row">
+      <button class="btn small primary" value="ok">Parear</button>
+      <button class="btn small" value="cancel">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
