@@ -639,9 +639,9 @@ async function renderAnalise() {
   const apiOk = CFG.modo === 'api' && CFG.apiKey;
   $('#painel-api').style.display = apiOk ? '' : 'none';
   $('#painel-assistido').style.display = apiOk ? 'none' : '';
-  $('#modo-info').textContent = apiOk
+  $('#modo-info').innerHTML = apiOk
     ? 'Modo automático ativo. Para voltar ao modo assistido (copiar/colar), altere nas Configurações.'
-    : 'Modo assistido: nenhuma chave ou custo necessário — usa o chat de IA que você já tem. Com chave de API (Configurações), a fila roda sozinha.';
+    : 'Modo assistido: nenhuma chave ou custo necessário — usa o chat de IA que você já tem.<br>💡 <b>Prefere que a fila rode sozinha?</b> Opção gratuita: crie uma chave do Gemini em <a class="go" href="https://aistudio.google.com" target="_blank" rel="noopener">aistudio.google.com</a> ("Get API key"), depois em <b>⚙ Configurações</b> escolha Modo "Automático", Provedor "Gemini", cole a chave, deixe Modelo vazio e clique "Testar conexão" (deve dar ✓).';
   $('#btn-copiar-prompt').disabled = !prontos.length;
 }
 
@@ -973,7 +973,7 @@ function atualizarCamposApi() {
   const prov = $('#cfg-provider').value;
   $('#cfg-base-wrap').style.display = prov === 'compat' ? '' : 'none';
   const dicas = {
-    gemini: 'Chave gratuita em aistudio.google.com → "Get API key". Só a chave basta — deixe Modelo vazio (usa gemini-2.5-flash). Funciona direto do navegador.',
+    gemini: 'Chave gratuita em aistudio.google.com → "Get API key". Só a chave basta — deixe Modelo vazio (usa gemini-2.5-flash). Cole a chave, clique "Testar conexão" (deve dar ✓) e a fila de análise passa a rodar sozinha.',
     claude: 'Chave em console.anthropic.com (paga por uso). Só a chave basta — deixe Modelo vazio (usa claude-sonnet-5).',
     compat: 'Para modelos locais (Ollama, LM Studio) ou proxy próprio: informe a URL base (ex.: http://localhost:11434/v1). A API oficial da OpenAI NÃO aceita chamadas do navegador.'
   };
