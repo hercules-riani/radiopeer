@@ -81,17 +81,28 @@ async function carregarConfig() {
   const kv = Object.fromEntries(linhas.map(l => [l.key, l.value]));
   CFG = {
     modo: kv.modo || 'assistido',
-    provider: kv.provider || 'claude',
-    apiKey: kv.apiKey || '',
-    model: kv.model || '',
-    baseUrl: kv.baseUrl || '',
+    provider: kv.provider || 'gemini',
+    providers: kv.providers || {},
     anonimizar: kv.anonimizar || false,
     segmentos: kv.segmentos || SEGMENTOS_PADRAO.join('\n')
   };
+  // migração do formato antigo (uma chave só, sem separação por provedor)
+  if (kv.apiKey && !CFG.providers[CFG.provider]) {
+    CFG.providers[CFG.provider] = { apiKey: kv.apiKey, model: kv.model || '', baseUrl: kv.baseUrl || '' };
+    await db.config.put({ key: 'providers', value: CFG.providers });
+  }
 }
 async function salvarConfig(patch) {
   Object.assign(CFG, patch);
   await db.config.bulkPut(Object.entries(patch).map(([key, value]) => ({ key, value })));
+}
+function provAtual() {
+  return CFG.providers[CFG.provider] || {};
+}
+async function salvarProv(campo, valor) {
+  if (!CFG.providers[CFG.provider]) CFG.providers[CFG.provider] = {};
+  CFG.providers[CFG.provider][campo] = valor;
+  await db.config.put({ key: 'providers', value: CFG.providers });
 }
 
 /* ===================== extração de texto ===================== */
@@ -418,13 +429,15 @@ async function filaPendente() {
 
 /* ===================== modo API ===================== */
 async function chamarIA(prompt) {
-  const model = CFG.model.trim();
+  const pc = provAtual();
+  const model = (pc.model || '').trim();
+  if (!pc.apiKey) throw new Error('Nenhuma chave salva para este provedor — cole a chave nas Configurações.');
   if (CFG.provider === 'claude') {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-api-key': CFG.apiKey,
+        'x-api-key': pc.apiKey,
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
@@ -436,7 +449,7 @@ async function chamarIA(prompt) {
   }
   if (CFG.provider === 'gemini') {
     const m = model || 'gemini-2.5-flash';
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(CFG.apiKey)}`, {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(pc.apiKey)}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -450,12 +463,12 @@ async function chamarIA(prompt) {
   if (CFG.provider === 'openai') {
     base = 'https://api.openai.com/v1';
   } else {
-    base = (CFG.baseUrl || '').replace(/\/$/, '');
+    base = (pc.baseUrl || '').replace(/\/$/, '');
     if (!base) throw new Error('Informe a URL base do endpoint compatível.');
   }
   const r = await fetch(base + '/chat/completions', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + CFG.apiKey },
+    headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + pc.apiKey },
     body: JSON.stringify({ model: model || (CFG.provider === 'openai' ? 'gpt-5.4-mini' : 'llama3.1'), messages: [{ role: 'user', content: prompt }] })
   });
   if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()).slice(0, 300));
@@ -641,7 +654,7 @@ async function renderAnalise() {
   if (!li.length) li.push('<li class="hint">Fila vazia — envie laudos na tela Enviar.</li>');
   $('#fila-lista').innerHTML = li.join('');
 
-  const apiOk = CFG.modo === 'api' && CFG.apiKey;
+  const apiOk = CFG.modo === 'api' && provAtual().apiKey;
   $('#painel-api').style.display = apiOk ? '' : 'none';
   $('#painel-assistido').style.display = apiOk ? 'none' : '';
   $('#modo-info').innerHTML = apiOk
@@ -965,9 +978,6 @@ async function renderChecklist() {
 function renderConfig() {
   $('#cfg-modo').value = CFG.modo;
   $('#cfg-provider').value = CFG.provider;
-  $('#cfg-key').value = CFG.apiKey;
-  $('#cfg-model').value = CFG.model;
-  $('#cfg-base').value = CFG.baseUrl;
   $('#cfg-anon').checked = !!CFG.anonimizar;
   $('#cfg-segmentos').value = CFG.segmentos;
   $('#sobre-pv').textContent = PROMPT_VERSION;
@@ -976,6 +986,12 @@ function renderConfig() {
 function atualizarCamposApi() {
   $('#cfg-api-campos').style.display = $('#cfg-modo').value === 'api' ? '' : 'none';
   const prov = $('#cfg-provider').value;
+  // cada provedor guarda seus próprios dados: ao trocar, carrega o que já foi salvo dele
+  const pc = CFG.providers[prov] || {};
+  $('#cfg-key').value = pc.apiKey || '';
+  $('#cfg-model').value = pc.model || '';
+  $('#cfg-base').value = pc.baseUrl || '';
+  $('#teste-api-msg').textContent = pc.apiKey ? 'chave salva ✓' : '';
   $('#cfg-base-wrap').style.display = prov === 'compat' ? '' : 'none';
   const dicas = {
     gemini: 'Chave gratuita em aistudio.google.com → "Get API key". Só a chave basta — deixe Modelo vazio (usa gemini-2.5-flash). Cole a chave, clique "Testar conexão" (deve dar ✓) e a fila de análise passa a rodar sozinha.',
@@ -1001,7 +1017,7 @@ async function exportarBackup() {
     versao: 1, exportadoEm: hoje(),
     laudos: await db.laudos.toArray(),
     pares: await db.pares.toArray(),
-    config: (await db.config.toArray()).filter(c => c.key !== 'apiKey')
+    config: (await db.config.toArray()).filter(c => c.key !== 'apiKey' && c.key !== 'providers')
   };
   const zip = new JSZip();
   zip.file('radiopeer-backup.json', JSON.stringify(dump));
@@ -1165,9 +1181,9 @@ async function init() {
   // config
   $('#cfg-modo').addEventListener('change', async e => { await salvarConfig({ modo: e.target.value }); atualizarCamposApi(); });
   $('#cfg-provider').addEventListener('change', async e => { await salvarConfig({ provider: e.target.value }); atualizarCamposApi(); });
-  $('#cfg-key').addEventListener('change', e => salvarConfig({ apiKey: e.target.value.trim() }));
-  $('#cfg-model').addEventListener('change', e => salvarConfig({ model: e.target.value.trim() }));
-  $('#cfg-base').addEventListener('change', e => salvarConfig({ baseUrl: e.target.value.trim() }));
+  $('#cfg-key').addEventListener('change', e => salvarProv('apiKey', e.target.value.trim()));
+  $('#cfg-model').addEventListener('change', e => salvarProv('model', e.target.value.trim()));
+  $('#cfg-base').addEventListener('change', e => salvarProv('baseUrl', e.target.value.trim()));
   $('#cfg-anon').addEventListener('change', e => salvarConfig({ anonimizar: e.target.checked }));
   $('#btn-salvar-seg').addEventListener('click', async () => { await salvarConfig({ segmentos: $('#cfg-segmentos').value }); toast('Segmentos salvos.'); });
   $('#btn-testar-api').addEventListener('click', async () => {
