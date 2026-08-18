@@ -449,12 +449,28 @@ async function chamarIA(prompt) {
   }
   if (CFG.provider === 'gemini') {
     const m = model || 'gemini-2.5-flash';
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(pc.apiKey)}`, {
+    const corpo = JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] });
+    // método oficial atual: chave no cabeçalho (funciona com chaves AIza... e com as novas AQ....)
+    let r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': pc.apiKey },
+      body: corpo
     });
-    if (!r.ok) throw new Error('Gemini HTTP ' + r.status + ': ' + (await r.text()).slice(0, 300));
+    if (!r.ok && (r.status === 400 || r.status === 401 || r.status === 403)) {
+      // compatibilidade: tenta o método antigo (chave na URL)
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(pc.apiKey)}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: corpo
+      });
+    }
+    if (!r.ok) {
+      const detalhe = (await r.text()).slice(0, 400);
+      let dica = '';
+      if (/API_KEY_INVALID|API key not valid/i.test(detalhe)) dica = ' — Dica: use o botão "Copy key" do Google (a chave exibida na tela é cortada) e cole a chave completa, sem espaços.';
+      else if (r.status === 429) dica = ' — cota gratuita esgotada por agora; aguarde alguns minutos.';
+      throw new Error('Gemini HTTP ' + r.status + ': ' + detalhe + dica);
+    }
     const j = await r.json();
     return (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
   }
