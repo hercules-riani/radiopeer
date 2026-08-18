@@ -445,13 +445,18 @@ async function chamarIA(prompt) {
     const j = await r.json();
     return (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
   }
-  // compatível com OpenAI
-  const base = (CFG.baseUrl || '').replace(/\/$/, '');
-  if (!base) throw new Error('Informe a URL base do endpoint compatível.');
+  // OpenAI oficial ou endpoint compatível
+  let base;
+  if (CFG.provider === 'openai') {
+    base = 'https://api.openai.com/v1';
+  } else {
+    base = (CFG.baseUrl || '').replace(/\/$/, '');
+    if (!base) throw new Error('Informe a URL base do endpoint compatível.');
+  }
   const r = await fetch(base + '/chat/completions', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'authorization': 'Bearer ' + CFG.apiKey },
-    body: JSON.stringify({ model: model || 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: model || (CFG.provider === 'openai' ? 'gpt-5.4-mini' : 'llama3.1'), messages: [{ role: 'user', content: prompt }] })
   });
   if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()).slice(0, 300));
   const j = await r.json();
@@ -974,12 +979,20 @@ function atualizarCamposApi() {
   $('#cfg-base-wrap').style.display = prov === 'compat' ? '' : 'none';
   const dicas = {
     gemini: 'Chave gratuita em aistudio.google.com → "Get API key". Só a chave basta — deixe Modelo vazio (usa gemini-2.5-flash). Cole a chave, clique "Testar conexão" (deve dar ✓) e a fila de análise passa a rodar sozinha.',
+    openai: 'Chave em platform.openai.com → "API keys" (começa com sk-...; paga por uso, à parte da assinatura do ChatGPT). Só a chave basta — deixe Modelo vazio (usa gpt-5.4-mini).',
     claude: 'Chave em console.anthropic.com (paga por uso). Só a chave basta — deixe Modelo vazio (usa claude-sonnet-5).',
-    compat: 'Para modelos locais (Ollama, LM Studio) ou proxy próprio: informe a URL base (ex.: http://localhost:11434/v1). A API oficial da OpenAI NÃO aceita chamadas do navegador.'
+    compat: 'Para modelos locais (Ollama, LM Studio) ou proxy próprio: informe a URL base (ex.: http://localhost:11434/v1) e o nome do modelo.'
   };
   $('#provider-dica').textContent = dicas[prov] || '';
-  const ph = { gemini: 'ex.: gemini-2.5-flash (opcional)', claude: 'ex.: claude-sonnet-5 (opcional)', compat: 'ex.: llama3.1 (obrigatório p/ local)' };
+  const ph = { gemini: 'padrão: gemini-2.5-flash', openai: 'padrão: gpt-5.4-mini', claude: 'padrão: claude-sonnet-5', compat: 'ex.: llama3.1 (obrigatório p/ local)' };
   $('#cfg-model').placeholder = ph[prov] || '';
+  const modelos = {
+    gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'],
+    openai: ['gpt-5.4-mini', 'gpt-5.4', 'gpt-4o-mini', 'gpt-4o'],
+    claude: ['claude-sonnet-5', 'claude-haiku-4-5', 'claude-opus-5'],
+    compat: ['llama3.1', 'qwen2.5', 'mistral']
+  };
+  $('#lista-modelos').innerHTML = (modelos[prov] || []).map(m => `<option value="${m}">`).join('');
 }
 
 /* ===================== backup ===================== */
