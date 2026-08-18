@@ -989,26 +989,45 @@ function atualizarCamposApi() {
   // cada provedor guarda seus próprios dados: ao trocar, carrega o que já foi salvo dele
   const pc = CFG.providers[prov] || {};
   $('#cfg-key').value = pc.apiKey || '';
-  $('#cfg-model').value = pc.model || '';
   $('#cfg-base').value = pc.baseUrl || '';
   $('#teste-api-msg').textContent = pc.apiKey ? 'chave salva ✓' : '';
   $('#cfg-base-wrap').style.display = prov === 'compat' ? '' : 'none';
   const dicas = {
-    gemini: 'Chave gratuita em aistudio.google.com → "Get API key". Só a chave basta — deixe Modelo vazio (usa gemini-2.5-flash). Cole a chave, clique "Testar conexão" (deve dar ✓) e a fila de análise passa a rodar sozinha.',
-    openai: 'Chave em platform.openai.com → "API keys" (começa com sk-...; paga por uso, à parte da assinatura do ChatGPT). Só a chave basta — deixe Modelo vazio (usa gpt-5.4-mini).',
-    claude: 'Chave em console.anthropic.com (paga por uso). Só a chave basta — deixe Modelo vazio (usa claude-sonnet-5).',
+    gemini: 'Chave gratuita em aistudio.google.com → "Get API key". Só a chave basta. Cole, clique "Testar conexão" (deve dar ✓) e a fila de análise passa a rodar sozinha.',
+    openai: 'Chave em platform.openai.com → "API keys" (começa com sk-...; paga por uso, à parte da assinatura do ChatGPT). Só a chave basta.',
+    claude: 'Chave em console.anthropic.com (paga por uso). Só a chave basta.',
     compat: 'Para modelos locais (Ollama, LM Studio) ou proxy próprio: informe a URL base (ex.: http://localhost:11434/v1) e o nome do modelo.'
   };
   $('#provider-dica').textContent = dicas[prov] || '';
-  const ph = { gemini: 'padrão: gemini-2.5-flash', openai: 'padrão: gpt-5.4-mini', claude: 'padrão: claude-sonnet-5', compat: 'ex.: llama3.1 (obrigatório p/ local)' };
-  $('#cfg-model').placeholder = ph[prov] || '';
-  const modelos = {
-    gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'],
-    openai: ['gpt-5.4-mini', 'gpt-5.4', 'gpt-4o-mini', 'gpt-4o'],
-    claude: ['claude-sonnet-5', 'claude-haiku-4-5', 'claude-opus-5'],
-    compat: ['llama3.1', 'qwen2.5', 'mistral']
-  };
-  $('#lista-modelos').innerHTML = (modelos[prov] || []).map(m => `<option value="${m}">`).join('');
+  montarSeletorModelo(prov, pc.model || '');
+}
+
+const MODELOS_SUGERIDOS = {
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'],
+  openai: ['gpt-5.4-mini', 'gpt-5.4', 'gpt-4o-mini', 'gpt-4o'],
+  claude: ['claude-sonnet-5', 'claude-haiku-4-5', 'claude-opus-5'],
+  compat: ['llama3.1', 'qwen2.5', 'mistral']
+};
+const MODELO_PADRAO = { gemini: 'gemini-2.5-flash', openai: 'gpt-5.4-mini', claude: 'claude-sonnet-5', compat: '' };
+
+function montarSeletorModelo(prov, modeloSalvo) {
+  const sug = MODELOS_SUGERIDOS[prov] || [];
+  const sel = $('#cfg-model-sel');
+  const padrao = MODELO_PADRAO[prov];
+  const opts = [];
+  if (padrao) opts.push(`<option value="">padrão — ${padrao}</option>`);
+  for (const m of sug) opts.push(`<option value="${m}">${m}</option>`);
+  opts.push(`<option value="__outro__">outro… (digitar o nome)</option>`);
+  sel.innerHTML = opts.join('');
+  const conhecido = modeloSalvo === '' || sug.includes(modeloSalvo);
+  sel.value = conhecido ? modeloSalvo : '__outro__';
+  $('#cfg-model-outro-wrap').style.display = sel.value === '__outro__' ? '' : 'none';
+  $('#cfg-model').value = conhecido ? '' : modeloSalvo;
+  atualizarMsgModelo(prov, modeloSalvo);
+}
+function atualizarMsgModelo(prov, modelo) {
+  const efetivo = modelo || MODELO_PADRAO[prov];
+  $('#modelo-msg').textContent = efetivo ? `Modelo em uso: ${efetivo} — trocar o modelo não altera a chave salva.` : 'Informe o nome do modelo.';
 }
 
 /* ===================== backup ===================== */
@@ -1182,7 +1201,24 @@ async function init() {
   $('#cfg-modo').addEventListener('change', async e => { await salvarConfig({ modo: e.target.value }); atualizarCamposApi(); });
   $('#cfg-provider').addEventListener('change', async e => { await salvarConfig({ provider: e.target.value }); atualizarCamposApi(); });
   $('#cfg-key').addEventListener('change', e => salvarProv('apiKey', e.target.value.trim()));
-  $('#cfg-model').addEventListener('change', e => salvarProv('model', e.target.value.trim()));
+  $('#cfg-model-sel').addEventListener('change', async e => {
+    const prov = $('#cfg-provider').value;
+    if (e.target.value === '__outro__') {
+      $('#cfg-model-outro-wrap').style.display = '';
+      $('#cfg-model').focus();
+    } else {
+      $('#cfg-model-outro-wrap').style.display = 'none';
+      await salvarProv('model', e.target.value);
+      atualizarMsgModelo(prov, e.target.value);
+      toast('Modelo salvo — a chave continua a mesma.');
+    }
+  });
+  $('#cfg-model').addEventListener('change', async e => {
+    const prov = $('#cfg-provider').value;
+    await salvarProv('model', e.target.value.trim());
+    atualizarMsgModelo(prov, e.target.value.trim());
+    toast('Modelo salvo — a chave continua a mesma.');
+  });
   $('#cfg-base').addEventListener('change', e => salvarProv('baseUrl', e.target.value.trim()));
   $('#cfg-anon').addEventListener('change', e => salvarConfig({ anonimizar: e.target.checked }));
   $('#btn-salvar-seg').addEventListener('click', async () => { await salvarConfig({ segmentos: $('#cfg-segmentos').value }); toast('Segmentos salvos.'); });

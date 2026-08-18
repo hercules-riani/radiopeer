@@ -210,8 +210,11 @@
               </label>
               <p class="hint" id="provider-dica"></p>
               <label class="campo">Chave de API <input type="password" id="cfg-key" placeholder="cole sua chave"></label>
-              <label class="campo">Modelo <input id="cfg-model" list="lista-modelos" placeholder="deixe vazio para usar o padrão"></label>
-              <datalist id="lista-modelos"></datalist>
+              <label class="campo">Modelo
+                <select id="cfg-model-sel"></select>
+              </label>
+              <label class="campo" id="cfg-model-outro-wrap" style="display:none;">Nome do modelo <input id="cfg-model" placeholder="digite o nome exato do modelo"></label>
+              <p class="hint" id="modelo-msg" style="margin-top:-4px;"></p>
               <label class="campo" id="cfg-base-wrap" style="display:none;">URL base <input id="cfg-base" placeholder="http://localhost:11434/v1"></label>
               <div class="cta-row"><button class="btn small" id="btn-testar-api">Testar conexão</button><span class="hint" id="teste-api-msg"></span></div>
               <p class="hint">A chave fica salva apenas neste navegador e é usada só para falar direto com o provedor escolhido. Sem chave nenhuma, o modo Assistido (copiar/colar) faz o mesmo trabalho.</p>
